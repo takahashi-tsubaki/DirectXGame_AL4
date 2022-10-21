@@ -660,7 +660,6 @@ void Object3d::CreateModel()
 		//}
 		
 		std::copy(indices.begin(), indices.end(), indexMap);
-
 		indexBuff->Unmap(0, nullptr);
 	}
 
