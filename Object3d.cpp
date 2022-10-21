@@ -403,23 +403,23 @@ void Object3d::CreateModel()
 	//ファイルストリーム
 	std::ifstream file;
 	//.objファイルを開く
-	file.open("Resources/triangle/triangle.obj");
+	file.open("Resources/triangle/triangle_texture.obj");
 	//ファイルオープン失敗をチェック
 	assert(!file.fail());
 
 	vector<XMFLOAT3> positions;//頂点座標
 	vector<XMFLOAT3> normals;//法線ベクトル
-	vector<XMFLOAT3> texcoords;//テクスチャUV
+	vector<XMFLOAT2> texcoords;//テクスチャUV
 	//1行ずつ読み込む
 	string line;
-	while (getline(file,line))
+	while (getline(file, line))
 	{
 		//1行分の文字列をストリームに変換して解析する
 		std::istringstream line_stream(line);
 
 		//半角スペース区切りで行の先頭文字列を取得
 		string key;
-		getline(line_stream, key,' ');
+		getline(line_stream, key, ' ');
 
 		//先頭文字列がvなら頂点座標
 		if (key == "v")
@@ -431,10 +431,34 @@ void Object3d::CreateModel()
 			line_stream >> position.z;
 			//座標データに追加
 			positions.emplace_back(position);
-			//頂点データに追加
-			VertexPosNormalUv vertex{};
-			vertex.pos = position;
-			vertices.emplace_back(vertex);
+			////頂点データに追加
+			//VertexPosNormalUv vertex{};
+			//vertex.pos = position;
+			//vertices.emplace_back(vertex);
+		}
+
+		if (key == "vt")
+		{
+			//U,V成分読み込み
+			XMFLOAT2 texcoord{};
+			line_stream >> texcoord.x;
+			line_stream >> texcoord.y;
+			//V方向反転
+			texcoord.y = 1.0f - texcoord.y;
+			//テクスチャ座標にデータを追加
+			texcoords.emplace_back(texcoord);
+		}
+		//法線ベクトル
+		if (key == "vn")
+		{
+			//X,Y,Z座標読み込み
+			XMFLOAT3 normal{};
+			line_stream >> normal.x;
+			line_stream >> normal.y;
+			line_stream >> normal.z;
+			//法線ベクトルデータに追加
+			normals.emplace_back(normal);
+
 		}
 
 		if (key == "f")
@@ -445,10 +469,22 @@ void Object3d::CreateModel()
 			{
 				//頂点インデックス1個分の文字列をストリームに変換して解析しやすくする
 				std::istringstream index_stream(index_string);
-				unsigned short indexPosition;
+				unsigned short indexPosition, indexNormal, indexTexcoord;
 				index_stream >> indexPosition;
 				//頂点インデックスに追加
-				indices.emplace_back(indexPosition - 1);
+				index_stream.seekg(1, ios_base::cur);//スラッシュを飛ばす
+				index_stream >> indexTexcoord;
+				index_stream.seekg(1, ios_base::cur);//スラッシュを飛ばす
+				index_stream >> indexNormal;
+
+				//頂点データの追加
+				VertexPosNormalUv vertex{};
+				vertex.pos = positions[indexPosition - 1];
+				vertex.normal = normals[indexNormal - 1];
+				vertex.uv = texcoords[indexTexcoord - 1];
+				vertices.emplace_back(vertex);
+				//インデックスデータを追加
+				indices.emplace_back((unsigned short)indices.size());
 			}
 		}
 
@@ -624,7 +660,6 @@ void Object3d::CreateModel()
 		//}
 		
 		std::copy(indices.begin(), indices.end(), indexMap);
-
 		indexBuff->Unmap(0, nullptr);
 	}
 
